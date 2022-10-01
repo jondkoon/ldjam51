@@ -1,3 +1,13 @@
+function math_round(val)
+  local decimal = abs(val - flr(val))
+  if (decimal <= 0.5) then
+    return flr(val)
+  else
+    return ceil(val)
+  end
+end
+
+
 function center_print(message, y, color)
   local width = #message * 4
   local x = (screen_width - width) / 2

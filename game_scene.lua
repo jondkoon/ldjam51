@@ -32,7 +32,7 @@ function make_bullet(o)
     width = 3,
     height = 3,
     draw = function(self)
-      circfill(self.pos.x, self.pos.y, 1, 3)
+      circfill(self.pos.x, self.pos.y, 1, 7)
     end,
     update = function(self)
       if (collided(self, self.target)) then
@@ -52,7 +52,23 @@ function make_turret(o)
     scene = o.scene,
     width = 8,
     height = 8,
-    shoot = function(self, target)
+    pos = vector{64,64},
+    sprite = 7,
+    find_target = function(self)
+      local closest
+      local closest_mag
+      for prince in all(self.scene.princes) do
+        local diff = (prince.pos - self.pos)
+        local mag = diff.mag
+        if (not closest or mag < closest_mag) then
+          closest = prince
+          closest_mag = mag
+        end
+      end
+      return closest
+    end,
+    shoot = function(self)
+      local target = self:find_target()
       local bullet = make_bullet({
         color = self.color, 
         pos = get_center(self),
@@ -61,10 +77,23 @@ function make_turret(o)
       })
       self.scene:add(bullet)
     end,
-    pos = vector{64,64},
-    sprite = 1,
     draw = function(self)
-      spr(self.sprite,self.pos.x, self.pos.y)
+      local target = self:find_target()
+      local diff = target.pos - self.pos
+      local angle = diff:normalize()
+      local rounded = vector{ math_round(angle.x), math_round(angle.y) }
+
+      local sprite = 8
+      if (rounded.x == 0) then
+        sprite = 7
+      elseif (rounded.y == 0) then
+        sprite = 9
+      end
+
+      local flip_x = rounded.x == -1
+      local flip_y = rounded.y == 1
+
+      spr(sprite,self.pos.x, self.pos.y, 1, 1, flip_x, flip_y)
     end
   }
   return turret
@@ -73,19 +102,30 @@ end
 function make_prince(x,y)
   local prince = {
     pos = vector{x,y},
-    dp = vector{1,0},
+    dp = vector{0,0},
     width = 2,
     height = 7,
-    sprite = 2,
+    sprite = 19,
     draw = function(self)
       spr(self.sprite,self.pos.x, self.pos.y)
     end,
     update = function(self)
-      if (self.pos.x + self.dp.x > screen_width) then
+      if (btn(0)) then
         self.dp.x = -1
-      elseif (self.pos.x + self.dp.x < 0) then
+      elseif (btn(1)) then
         self.dp.x = 1
+      else
+        self.dp.x = 0
       end
+
+      if (btn(2)) then
+        self.dp.y = -1
+      elseif (btn(3)) then
+        self.dp.y = 1
+      else
+        self.dp.y = 0
+      end
+
       self.pos += self.dp
     end
   }
@@ -107,10 +147,13 @@ game_scene = make_scene({
   end,
   update = function(self)
     if (btnp(4)) then
-      self.turret:shoot(self.princes[1])
+      self.turret:shoot()
     end
   end,
   draw = function(self)
-    cls(6)
+    palt(0, false) -- remove black as default transparent color
+    palt(3, true) -- use green as transparent color
+    cls(3)
+    map(0, 0, 0, 0, 16, 16)
   end
 })
