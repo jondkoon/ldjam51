@@ -31,6 +31,9 @@ function make_bullet(o)
     scene = o.scene,
     width = 3,
     height = 3,
+    init = function()
+      sfx(4)
+    end,
     draw = function(self)
       circfill(self.pos.x, self.pos.y, 1, 7)
     end,
@@ -83,11 +86,11 @@ function make_turret(o)
       local angle = diff:normalize()
       local rounded = vector{ math_round(angle.x), math_round(angle.y) }
 
-      local sprite = 8
+      local sprite = 8 -- angled
       if (rounded.x == 0) then
-        sprite = 7
+        sprite = 7 -- facing up
       elseif (rounded.y == 0) then
-        sprite = 9
+        sprite = 9 -- facing right
       end
 
       local flip_x = rounded.x == -1
@@ -150,6 +153,7 @@ game_scene = make_scene({
     palt(7, true)
     self.turret = make_turret({ color = 11, scene = self })
     self:add(self.turret)
+    music(0)
   end,
   update = function(self)
     if (btnp(4)) then
