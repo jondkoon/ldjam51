@@ -105,9 +105,15 @@ function make_prince(x,y)
     dp = vector{0,0},
     width = 2,
     height = 7,
-    sprite = 19,
     draw = function(self)
-      spr(self.sprite,self.pos.x, self.pos.y)
+      local flip_x = self.dp.x < 0
+      local sprite = 16
+      if (self.dp.y < 0) then
+        sprite = 17
+      elseif (self.dp.y > 0) then
+        sprite = 18
+      end
+      spr(sprite,self.pos.x - 3, self.pos.y - 1,1,1, flip_x)
     end,
     update = function(self)
       if (btn(0)) then
