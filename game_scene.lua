@@ -7,6 +7,7 @@ function make_bullet(o)
     width = 3,
     height = 3,
     speed = 1.5,
+    power = 1,
     init = function()
       sfx(4)
     end,
@@ -15,6 +16,7 @@ function make_bullet(o)
     end,
     update = function(self)
       if (collided(self, self.target)) then
+        self.target:hit(self.power)
         self.scene:remove(self)
         return
       end
@@ -33,13 +35,15 @@ function make_turret(o)
     height = 8,
     pos = o.pos,
     sprite = 7,
+    flip_x = false,
+    flip_y = true,
     find_target = function(self)
       local closest
       local closest_mag
       for prince in all(self.scene.princes) do
-        local diff = (prince.pos - self.pos)
-        local mag = diff.mag
-        if (not closest or mag < closest_mag) then
+        local diff = prince.pos - self.pos
+        local mag = #diff
+        if (closest == nil or mag < closest_mag) then
           closest = prince
           closest_mag = mag
         end
@@ -48,17 +52,22 @@ function make_turret(o)
     end,
     shoot = function(self)
       local target = self:find_target()
-      local bullet = make_bullet({
-        color = self.color, 
-        pos = get_center(self),
-        target = target,
-        scene = self.scene
-      })
-      self.scene:add(bullet)
+      if (target) then
+        local bullet = make_bullet({
+          color = self.color, 
+          pos = get_center(self),
+          target = target,
+          scene = self.scene
+        })
+        self.scene:add(bullet)
+      end
     end,
-    draw = function(self)
-      local target = self:find_target()
-      local diff = target.pos - self.pos
+    update = function(self)
+      self.target = self:find_target()
+      if (not self.target) then
+        return
+      end
+      local diff = self.target.pos - self.pos
       local angle = diff:normalize()
       local rounded = vector{ math_round(angle.x), math_round(angle.y) }
 
@@ -69,10 +78,13 @@ function make_turret(o)
         sprite = 9 -- facing right
       end
 
-      local flip_x = rounded.x == -1
-      local flip_y = rounded.y == 1
+      self.sprite = sprite
 
-      spr(sprite,self.pos.x, self.pos.y, 1, 1, flip_x, flip_y)
+      self.flip_x = rounded.x == -1
+      self.flip_y = rounded.y == 1      
+    end,
+    draw = function(self)
+      spr(self.sprite, self.pos.x, self.pos.y, 1, 1, self.flip_x, self.flip_y)
     end
   }
   return turret
@@ -86,6 +98,16 @@ function make_prince(o)
     width = 2,
     height = 7,
     speed = 0.75,
+    health = 10,
+    hit = function(self, power)
+      self.health -= power
+    end,
+    complete = function(self)
+      self.scene:remove_prince(self)
+    end,
+    died = function(self)
+      self.scene:remove_prince(self)
+    end,
     draw = function(self)
       local flip_x = self.dp.x < 0
       local sprite = 16
@@ -97,8 +119,13 @@ function make_prince(o)
       spr(sprite,self.pos.x - 3, self.pos.y - 1,1,1, flip_x)
     end,
     update = function(self)
+      if (self.health < 0) then
+        self:died()
+      end
+
       local path_direction = self.scene:get_path_direction(self.pos)
       if (path_direction == "done") then
+        self:complete()
         return
       end
 
@@ -162,6 +189,10 @@ game_scene = make_scene({
     add(self.princes, prince)
     self:add(prince)
   end,
+  remove_prince = function(self, prince)
+    self:remove(prince)
+    del(self.princes, prince)
+  end,
   add_turret = function(self, pos)
     local turret = make_turret({ color = 11, scene = self, pos = pos })
     add(self.turrets, turret)
@@ -192,6 +223,9 @@ game_scene = make_scene({
         turret:shoot()
       end
     end
+    if (btnp(5)) then
+      self:add_prince()
+    end
   end,
   draw = function(self)
     palt(0, false) -- remove black as default transparent color
@@ -206,6 +240,5 @@ game_scene = make_scene({
     --   local offset = i % 2 == 0 and 2 or -2
     --   print(i, tile.x * 8, tile.y * 8 + offset, 8)
     -- end
-
   end
 })
