@@ -252,6 +252,7 @@ game_scene = make_scene({
     self:add(turret)
   end,
   init = function(self)
+
     self.start_tile_pos = find_map_tile(start_tile,0,0,16,16)
     self.end_tile_pos = find_map_tile(end_tile,0,0,16,16)
 
@@ -268,11 +269,14 @@ game_scene = make_scene({
     self.princess = make_princess({ scene = self, pos = vector{ 30, 24 } })
     self:add(self.princess)
 
+    self.iris = make_iris(self.princess.pos.x + 1, self.princess.pos.y + 3)
+
     music(0)
 
     menuitem(1, "restart", function() change_scene(game_scene) end)
   end,
   update = function(self)
+    self.iris:update()
     if (btnp(4)) then
       for turret in all(self.turrets) do
         turret:shoot()
@@ -302,5 +306,8 @@ game_scene = make_scene({
     --   local offset = i % 2 == 0 and 2 or -2
     --   print(i, tile.x * 8, tile.y * 8 + offset, 8)
     -- end
+  end,
+  after_draw = function(self)
+    self.iris:draw()
   end
 })
