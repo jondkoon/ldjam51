@@ -128,6 +128,11 @@ function make_prince(o)
       end
 
       local path_direction = self.scene:get_path_direction(self.pos)
+
+      if (path_direction == nil) then
+        return
+      end
+
       if (path_direction == "done") then
         self:complete()
         return
@@ -138,6 +143,47 @@ function make_prince(o)
     end
   }
   return prince
+end
+
+function make_princess(o)
+  local princess = {
+    pos = o.pos,
+    scene = o.scene,
+    dp = vector{0,0},
+    width = 2,
+    height = 7,
+    speed = 0.75,
+    draw = function(self)
+      local flip_x = self.dp.x < 0
+      local sprite = 22
+      if (math_round(self.dp.y) < 0) then
+        sprite = 21
+      elseif (math_round(self.dp.x) != 0) then
+        sprite = 20
+      end
+      spr(sprite,self.pos.x - 3, self.pos.y - 1,1,1, flip_x)
+    end,
+    update = function(self)
+      if (btn(0)) then
+        self.dp.x = -1
+      elseif (btn(1)) then
+        self.dp.x = 1
+      else
+        self.dp.x = 0
+      end
+
+      if (btn(2)) then
+        self.dp.y = -1
+      elseif (btn(3)) then
+        self.dp.y = 1
+      else
+        self.dp.y = 0
+      end
+
+      self.pos += self.dp * self.speed
+    end
+  }
+  return princess
 end
 
 function to_tile_coordinate(pos)
@@ -171,7 +217,7 @@ game_scene = make_scene({
       for direction in all(vector_directions_4) do
         local neighbor = tile_pos + direction
         local tile_n = vector_mget(neighbor)
-        if (tile_n == plain_path_tile) then
+        if (tile_n == plain_path_tile or tile_n == end_tile) then
           visit(neighbor, tile_pos)
         end
       end
@@ -184,6 +230,9 @@ game_scene = make_scene({
       return "done"
     end
     local next_tile = self.next_tile_table[get_tile_key(current_tile)]
+    if (not next_tile) then
+      return nil
+    end
     local next_pos = from_tile_coordinate(next_tile) + vector{3,0} -- convert to screen coordinates and move to center of tile
     return next_pos - pos
   end,
@@ -215,6 +264,9 @@ game_scene = make_scene({
 
     self.princes = {}
     self:add_prince(self)
+
+    self.princess = make_princess({ scene = self, pos = vector{ 30, 24 } })
+    self:add(self.princess)
 
     music(0)
 
