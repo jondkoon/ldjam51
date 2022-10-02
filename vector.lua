@@ -135,5 +135,14 @@ vector = setmetatable({
 vector.__index = vector
 vector.mag = vector.__len
 
-local vector_directions_4 = {vector{1, 0}, vector{0, 1}, vector{-1, 0}, vector{0, -1}}
-local vector_directions_8 = {vector{1, 0}, vector{1, 1}, vector{0, 1}, vector{-1, 1}, vector{-1, 0}, vector{-1, -1}, vector{0, -1}, vector{1, -1}}
+vector_directions_4 = {vector{1, 0}, vector{0, 1}, vector{-1, 0}, vector{0, -1}}
+vector_directions_8 = {vector{1, 0}, vector{1, 1}, vector{0, 1}, vector{-1, 1}, vector{-1, 0}, vector{-1, -1}, vector{0, -1}, vector{1, -1}}
+
+function vector_mget(v)
+    return mget(v.x, v.y)
+end
+
+vector_right = vector_directions_4[1]
+vector_up = vector_directions_4[2]
+vector_left = vector_directions_4[3]
+vector_down = vector_directions_4[4]

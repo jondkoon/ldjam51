@@ -1,28 +1,3 @@
-function get_center(o)
-  return o.pos + vector{o.width / 2, o.height / 2}
-end
-
-function get_box(o)
-  return {
-    min_x = o.pos.x,
-    min_y = o.pos.y,
-    max_x = o.pos.x + o.width,
-    max_y = o.pos.y + o.height
-  }
-end
-
-function collided(a,b)
-  local box_a = get_box(a)
-  local box_b = get_box(b)
-  return (
-    box_a.min_x <= box_b.max_x and
-    box_a.max_x >= box_b.min_x and
-    box_a.min_y <= box_b.max_y and
-    box_a.max_y >= box_b.min_y
-  )
-end
-
-
 function make_bullet(o)
   local bullet = {
     color = o.color,
@@ -31,6 +6,7 @@ function make_bullet(o)
     scene = o.scene,
     width = 3,
     height = 3,
+    speed = 1.5,
     init = function()
       sfx(4)
     end,
@@ -43,7 +19,7 @@ function make_bullet(o)
         return
       end
       local dir = get_center(self.target) - self.pos
-      self.pos += dir:normalize() * 2
+      self.pos += dir:normalize() * self.speed
     end
   }
   return bullet
@@ -55,7 +31,7 @@ function make_turret(o)
     scene = o.scene,
     width = 8,
     height = 8,
-    pos = vector{64,64},
+    pos = o.pos,
     sprite = 7,
     find_target = function(self)
       local closest
@@ -102,62 +78,119 @@ function make_turret(o)
   return turret
 end
 
-function make_prince(x,y)
+function make_prince(o)
   local prince = {
-    pos = vector{x,y},
+    pos = o.pos,
+    scene = o.scene,
     dp = vector{0,0},
     width = 2,
     height = 7,
+    speed = 0.75,
     draw = function(self)
       local flip_x = self.dp.x < 0
       local sprite = 16
-      if (self.dp.y < 0) then
+      if (math_round(self.dp.y) < 0) then
         sprite = 17
-      elseif (self.dp.y > 0) then
+      elseif (math_round(self.dp.y) > 0) then
         sprite = 18
       end
       spr(sprite,self.pos.x - 3, self.pos.y - 1,1,1, flip_x)
     end,
     update = function(self)
-      if (btn(0)) then
-        self.dp.x = -1
-      elseif (btn(1)) then
-        self.dp.x = 1
-      else
-        self.dp.x = 0
+      local path_direction = self.scene:get_path_direction(self.pos)
+      if (path_direction == "done") then
+        return
       end
 
-      if (btn(2)) then
-        self.dp.y = -1
-      elseif (btn(3)) then
-        self.dp.y = 1
-      else
-        self.dp.y = 0
-      end
-
-      self.pos += self.dp
+      self.dp = path_direction:normalize()
+      self.pos += self.dp * self.speed
     end
   }
   return prince
 end
 
+function to_tile_coordinate(pos)
+  return vector{math_round(pos.x / 8), math_round(pos.y / 8)}
+end
+
+function from_tile_coordinate(pos)
+  return vector{math_round(pos.x * 8), math_round(pos.y * 8)}
+end
+
+
+function get_tile_key(tile_pos)
+  return tile_pos.x..','..tile_pos.y
+end
+
 game_scene = make_scene({
+  init_path = function(self)
+    local visited = {}
+    self.path = {}
+    self.next_tile_table = {}
+    function visit(tile_pos, prev_tile_pos)
+      local key = get_tile_key(tile_pos)
+      if (visited[key]) then
+        return
+      end
+      visited[key] = key
+      add(self.path, tile_pos)
+      if (prev_tile_pos) then
+        self.next_tile_table[get_tile_key(prev_tile_pos)] = tile_pos
+      end
+      for direction in all(vector_directions_4) do
+        local neighbor = tile_pos + direction
+        local tile_n = vector_mget(neighbor)
+        if (tile_n == plain_path_tile) then
+          visit(neighbor, tile_pos)
+        end
+      end
+    end
+    visit(self.start_tile_pos)
+  end,
+  get_path_direction = function(self, pos)
+    local current_tile = to_tile_coordinate(pos)
+    if (current_tile == self.end_tile_pos) then
+      return "done"
+    end
+    local next_tile = self.next_tile_table[get_tile_key(current_tile)]
+    local next_pos = from_tile_coordinate(next_tile) + vector{3,0} -- convert to screen coordinates and move to center of tile
+    return next_pos - pos
+  end,
   add_prince = function(self)
-    local prince = make_prince(28,28)
+    local prince_start = vector{ self.start_tile_pos.x * 8 + 3, self.start_tile_pos.y * 8 }
+    local prince = make_prince({ pos = prince_start, scene = self })
     add(self.princes, prince)
     self:add(prince)
   end,
+  add_turret = function(self, pos)
+    local turret = make_turret({ color = 11, scene = self, pos = pos })
+    add(self.turrets, turret)
+    self:add(turret)
+  end,
   init = function(self)
+    self.start_tile_pos = find_map_tile(start_tile,0,0,16,16)
+    mset(self.start_tile_pos.x, self.start_tile_pos.y, plain_path_tile)
+
+    self.end_tile_pos = find_map_tile(end_tile,0,0,16,16)
+    mset(self.end_tile_pos.x, self.end_tile_pos.y, plain_path_tile)
+
+    self:init_path()
+
+    self.turrets = {}
+    self:add_turret(vector{32,64})
+    self:add_turret(vector{64,64})
+    self:add_turret(vector{96,64})
+
     self.princes = {}
-    self:add_prince()
-    palt(7, true)
-    self.turret = make_turret({ color = 11, scene = self })
-    self:add(self.turret)
+    self:add_prince(self)
+
     music(0)
   end,
   update = function(self)
     if (btnp(4)) then
-      self.turret:shoot()
+      for turret in all(self.turrets) do
+        turret:shoot()
+      end
     end
   end,
   draw = function(self)
@@ -165,5 +198,14 @@ game_scene = make_scene({
     palt(3, true) -- use green as transparent color
     cls(3)
     map(0, 0, 0, 0, 16, 16)
+
+
+    -- debug path finding
+    -- for i = 1, #self.path do
+    --   local tile = self.path[i]
+    --   local offset = i % 2 == 0 and 2 or -2
+    --   print(i, tile.x * 8, tile.y * 8 + offset, 8)
+    -- end
+
   end
 })
