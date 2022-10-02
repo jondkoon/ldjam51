@@ -256,6 +256,10 @@ game_scene = make_scene({
     self:add(turret)
   end,
   init = function(self)
+    self.wave = 1
+    self.countdown = 2
+
+    self.gold = 100
 
     self.start_tile_pos = find_map_tile(start_tile,0,0,16,16)
     self.end_tile_pos = find_map_tile(end_tile,0,0,16,16)
@@ -268,7 +272,7 @@ game_scene = make_scene({
     self:add_turret(vector{96,64})
 
     self.princes = {}
-    self:add_prince(self)
+    self:add_prince()
 
     self.princess = make_princess({ scene = self, pos = vector{ 30, 24 } })
     self:add(self.princess)
@@ -279,7 +283,20 @@ game_scene = make_scene({
 
     menuitem(1, "restart", function() change_scene(game_scene) end)
   end,
+  next_wave = function(self)
+    self.countdown = 10
+    self.wave += 1
+    self:add_prince()
+  end,
   update = function(self)
+    if (frame + 1 % 60 == 1) then
+      self.countdown -= 1
+    end
+
+    if (self.countdown == -1) then
+      self:next_wave()
+    end
+
     self.iris:update()
     if (btnp(4)) then
       for turret in all(self.turrets) do
@@ -313,5 +330,24 @@ game_scene = make_scene({
   end,
   after_draw = function(self)
     self.iris:draw()
+    
+
+    -- black HUD
+    rectfill(0,0,screen_width, 6, 1)
+
+    -- coin indicator
+    spr(25, 1, 1)
+    print(self.gold, 6, 1, 7)
+
+    -- wave indicator
+    print("wave "..self.wave, 50, 1, 7)
+
+    -- countdown
+    spr(24, screen_width - 15,0)
+    local countdown_text = self.countdown == 10 and "10" or "0"..self.countdown
+    local countdown_color = self.countdown <= 3 and 8 or 7
+    print(countdown_text, screen_width - 8, 1, countdown_color)
+
+    
   end
 })
