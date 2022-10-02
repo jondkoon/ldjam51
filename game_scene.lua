@@ -37,6 +37,7 @@ function make_turret(o)
     sprite = 7,
     flip_x = false,
     flip_y = true,
+    fire_interval = 30,
     find_target = function(self)
       local closest
       local closest_mag
@@ -66,6 +67,9 @@ function make_turret(o)
       self.target = self:find_target()
       if (not self.target) then
         return
+      end
+      if (frame % self.fire_interval == 0) then
+        self:shoot()
       end
       local diff = self.target.pos - self.pos
       local angle = diff:normalize()
@@ -200,10 +204,7 @@ game_scene = make_scene({
   end,
   init = function(self)
     self.start_tile_pos = find_map_tile(start_tile,0,0,16,16)
-    mset(self.start_tile_pos.x, self.start_tile_pos.y, plain_path_tile)
-
     self.end_tile_pos = find_map_tile(end_tile,0,0,16,16)
-    mset(self.end_tile_pos.x, self.end_tile_pos.y, plain_path_tile)
 
     self:init_path()
 
@@ -216,6 +217,8 @@ game_scene = make_scene({
     self:add_prince(self)
 
     music(0)
+
+    menuitem(1, "restart", function() change_scene(game_scene) end)
   end,
   update = function(self)
     if (btnp(4)) then
@@ -227,11 +230,18 @@ game_scene = make_scene({
       self:add_prince()
     end
   end,
+  draw_over_tile = function(self, tile_pos)
+    local map_pos = from_tile_coordinate(tile_pos)
+    spr(plain_path_tile, map_pos.x, map_pos.y)
+  end,
   draw = function(self)
     palt(0, false) -- remove black as default transparent color
     palt(3, true) -- use green as transparent color
     cls(3)
     map(0, 0, 0, 0, 16, 16)
+
+    self:draw_over_tile(self.start_tile_pos)
+    self:draw_over_tile(self.end_tile_pos)
 
 
     -- debug path finding

@@ -2,6 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 38
 __lua__
 
+frame = 0
+
 #include globals.lua
 #include vector.lua
 #include utils.lua
@@ -10,11 +12,16 @@ __lua__
 #include title_scene.lua
 
 
+
 function _init()
-	change_scene(title_scene)
+	change_scene(game_scene)
 end
 
 function _update60()
+	frame += 1
+	if (frame > 60) then
+		frame = 0
+	end
 	current_scene:update()
 end
 
