@@ -150,7 +150,7 @@ function make_princess(o)
     pos = o.pos,
     scene = o.scene,
     dp = vector{0,0},
-    width = 2,
+    width = 4,
     height = 7,
     speed = 0.75,
     draw = function(self)
@@ -161,7 +161,7 @@ function make_princess(o)
       elseif (math_round(self.dp.x) != 0) then
         sprite = 20
       end
-      spr(sprite,self.pos.x - 3, self.pos.y - 1,1,1, flip_x)
+      spr(sprite,self.pos.x - 3, self.pos.y - 2,1,1, flip_x)
     end,
     update = function(self)
       if (btn(0)) then
@@ -180,7 +180,11 @@ function make_princess(o)
         self.dp.y = 0
       end
 
-      self.pos += self.dp * self.speed
+      local next_pos = self.pos + (self.dp * self.speed)
+
+      if (next_pos.x > 1 and next_pos.x < screen_width - 2 and next_pos.y > 8 and next_pos.y < screen_height - self.height) then
+        self.pos = next_pos
+      end
     end
   }
   return princess
