@@ -33,9 +33,6 @@ function make_bullet(o)
     height = 3,
     speed = 1.5,
     power = o.power or 1,
-    init = function()
-      sfx(4)
-    end,
     draw = function(self)
       circfill(self.pos.x, self.pos.y, 1, self.color)
     end,
@@ -69,27 +66,31 @@ local turret_levels = {
     fire_interval = 60,
     range = 30,
     power = 5,
+    -- dps = 5
   },
   {
-    cost = 100,
+    cost = 25,
     color = 12, -- blue
     fire_interval = 60,
     range = 40,
     power = 10,
+    -- dps = 10
   },
   {
-    cost = 200,
+    cost = 25,
     color = 9, -- orange
-    fire_interval = 60,
+    fire_interval = 30,
     range = 50,
     power = 10,
+    -- dps = 20
   },
   {
-    cost = 300,
+    cost = 75,
     color = 10, -- yellow
-    fire_interval = 30,
-    range = 30,
-    power = 15,
+    fire_interval = 20,
+    range = 50,
+    power = 10,
+    -- dps = 30
   }
 }
 
@@ -140,6 +141,7 @@ function make_turret(o)
     shoot = function(self)
       local target = self:find_target()
       if (target) then
+        sfx(4)
         local bullet = make_bullet({
           color = self.color, 
           pos = get_center(self),
@@ -201,9 +203,10 @@ function make_prince(o)
     width = 2,
     height = 7,
     speed = 0.6,
-    health = 10,
+    health = 10 + (o.scene.wave * 5),
     hit = function(self, power)
       self.health -= power
+      -- make_temp_message({ scene = self.scene, text = power, pos = self.pos, seconds = 0.5, color = 8 })
     end,
     complete = function(self)
       self.scene:lost()
@@ -375,7 +378,10 @@ local wave_prince_count = {
   2,
   4,
   6,
-  10
+  7,
+  12,
+  15,
+  20,
 }
 
 local show_instructions = true
@@ -489,7 +495,7 @@ game_scene = make_scene({
   end,
   init = function(self)
     self.scene_time = 0
-    self.prince_wave_count = 1
+    self.prince_wave_count = 0
     self.next_prince_wave_count = wave_prince_count[1]
     self.wave = 0
     self.wave_countdown = 10
@@ -512,7 +518,7 @@ game_scene = make_scene({
 
     self.iris = make_iris(self.princess.pos.x + 1, self.princess.pos.y + 3)
 
-    music(0)
+    music(2)
 
     menuitem(1, "restart", function() change_scene(game_scene) end)
   end,

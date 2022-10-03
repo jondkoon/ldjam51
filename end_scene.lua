@@ -6,11 +6,13 @@ end_scene = make_scene({
   init = function(self)
     sfx(1)
     self.start_game_text_blink = 0
+    self.scene_timer = 0
   end,
   update = function(self)
+    self.scene_timer += 1
     self.start_game_text_blink += 1
     if self.start_game_text_blink > 60 then self.start_game_text_blink = 1 end
-    if btnp(4) or btnp(5) then
+    if self.scene_timer / 60 > 2 and (btnp(4) or btnp(5)) then
       change_scene(game_scene)
     end
   end,
