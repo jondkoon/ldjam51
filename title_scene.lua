@@ -74,7 +74,7 @@ title_scene = make_scene({
 
     -- instructions
     if self.start_game_text_blink > 30 then
-      center_print("press z or x to start", 50, 7)
+      center_print("press z to start", 50, 7)
     end
 
     -- castle

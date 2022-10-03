@@ -21,7 +21,7 @@ end_scene = make_scene({
 
     -- instructions
     if self.start_game_text_blink > 30 then
-      center_print("press z or x to try again", 100, 7)
+      center_print("press z try again", 100, 7)
     end
   end
 })

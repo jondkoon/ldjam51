@@ -21,6 +21,10 @@ __lua__
 local vector
 vector = setmetatable({
 
+ clone = function(self)
+    return vector{self.x, self.y}
+ end,
+
  __eq = function(a, b)
   return a.x == b.x and a.y == b.y
  end,

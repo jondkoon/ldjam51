@@ -4,10 +4,11 @@ function make_bullet(o)
     pos = o.pos,
     target = o.target,
     scene = o.scene,
+    dp = o.dp,
     width = 3,
     height = 3,
     speed = 1.5,
-    power = 1,
+    power = o.power or 1,
     init = function()
       sfx(4)
     end,
@@ -15,13 +16,23 @@ function make_bullet(o)
       circfill(self.pos.x, self.pos.y, 1, self.color)
     end,
     update = function(self)
-      if (collided(self, self.target)) then
-        self.target:hit(self.power)
-        self.scene:remove(self)
-        return
+      -- follow target if specified
+      if (self.target) then
+        if (collided(self, self.target)) then
+          self.target:hit(self.power)
+          self.scene:remove(self)
+          return
+        end
+        local dir = get_center(self.target) - self.pos
+        self.pos += dir:normalize() * self.speed
+      else
+        self.pos += self.dp:normalize() * self.speed
       end
-      local dir = get_center(self.target) - self.pos
-      self.pos += dir:normalize() * self.speed
+
+      -- remove if off screen
+      if (self.pos.x < 0 or self.pos.x > screen_width or self.pos.y < 0 or self.pos.y > screen_height) then
+        self.scene:remove(self)
+      end
     end
   }
   return bullet
@@ -163,6 +174,32 @@ function make_princess(o)
     width = 4,
     height = 7,
     speed = 0.75,
+    find_target = function(self)
+      local closest
+      local closest_mag
+      for prince in all(self.scene.princes) do
+        local diff = prince.pos - self.pos
+        local mag = #diff
+        if ((closest == nil or mag < closest_mag)) then
+          closest = prince
+          closest_mag = mag
+        end
+      end
+      return closest
+    end,
+    shoot = function(self)
+      local color = random_one({10, 12, 13, 14, 9 })
+      local target = self:find_target()
+      local dp = self.dp == vector{0,0} and vector{0,1} or self.dp:clone()
+      local bullet = make_bullet({
+        color = color,
+        pos = get_center(self),
+        dp = dp,
+        target = target,
+        scene = self.scene
+      })
+      self.scene:add(bullet)
+    end,    
     draw = function(self)
       local flip_x = self.dp.x < 0
       local sprite = 22
@@ -202,6 +239,10 @@ function make_princess(o)
         self.dp.y = 1
       else
         self.dp.y = 0
+      end
+
+      if (btnp(5)) then
+        self:shoot()
       end
 
       local next_pos = self.pos + (self.dp * self.speed)
@@ -352,6 +393,7 @@ game_scene = make_scene({
     self.gold_earned += amount
   end,
   init = function(self)
+    self.scene_time = 0
     self.prince_wave_count = 0
     self.next_prince_wave_count = wave_prince_count[1]
     self.wave = 0
@@ -386,6 +428,7 @@ game_scene = make_scene({
     self.next_prince_wave_count = wave_prince_count[self.wave + 1] or 20
   end,
   update = function(self)
+    self.scene_time += 1
     if (frame % 30 == 0 and self.prince_wave_count > 0) then
       self.prince_wave_count -= 1
       self:add_prince()
@@ -400,14 +443,6 @@ game_scene = make_scene({
     end
 
     self.iris:update()
-    if (btnp(4)) then
-      for turret in all(self.turrets) do
-        turret:shoot()
-      end
-    end
-    if (btnp(5)) then
-      self:add_prince()
-    end
   end,
   draw_over_tile = function(self, tile_pos)
     local map_pos = from_tile_coordinate(tile_pos)
@@ -422,6 +457,10 @@ game_scene = make_scene({
     self:draw_over_tile(self.start_tile_pos)
     self:draw_over_tile(self.end_tile_pos)
 
+    if (self.scene_time < 60 * 5) then
+      center_print("press z to buy turrets", 94, 7)
+      center_print("press x to fire", 102, 7)
+    end
 
     -- debug path finding
     -- for i = 1, #self.path do
