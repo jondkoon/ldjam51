@@ -47,6 +47,7 @@ title_scene = make_scene({
     del(self.princes, prince)
   end,
   init = function(self)
+    music(1)
     self.start_game_text_blink = 1
     self.princes = {}
 

@@ -49,7 +49,7 @@ function make_turret(o)
     sprite = 7,
     flip_x = false,
     flip_y = true,
-    fire_interval = 30,
+    fire_interval = 60,
     range = 30,
     debug_show_range = false,
     find_target = function(self)
@@ -72,7 +72,8 @@ function make_turret(o)
           color = self.color, 
           pos = get_center(self),
           target = target,
-          scene = self.scene
+          scene = self.scene,
+          power = 5
         })
         self.scene:add(bullet)
       end
@@ -123,7 +124,7 @@ function make_prince(o)
     width = 2,
     height = 7,
     speed = 0.6,
-    health = 5,
+    health = 10,
     hit = function(self, power)
       self.health -= power
     end,
@@ -351,8 +352,7 @@ game_scene = make_scene({
     return next_pos - pos
   end,
   lost = function(self)
-    end_scene.gold = self.gold_earned
-    end_scene.wave = self.wave
+    end_scene:set({ gold = self.gold_earned, wave = self.wave })
     change_scene(end_scene)
   end,
   add_prince = function(self)
@@ -376,7 +376,7 @@ game_scene = make_scene({
     return tile_info
   end,
   add_turret = function(self, pos)
-    local turret_cost = 50
+    local turret_cost = 75
     local tile_pos = to_tile_coordinate(pos)
     local grid_x = self.turret_grid[tile_pos.x]
     local is_eligible = grid_x and grid_x[tile_pos.y] == false

@@ -1,5 +1,12 @@
 end_scene = make_scene({
+  set = function(self, stats)
+    self.gold = stats.gold
+    self.wave = stats.wave
+  end,
   init = function(self)
+    sfx(1)
+    self.gold = 0
+    self.wave = 0
     self.start_game_text_blink = 0
   end,
   update = function(self)
