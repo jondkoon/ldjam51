@@ -12,7 +12,7 @@ function make_bullet(o)
       sfx(4)
     end,
     draw = function(self)
-      circfill(self.pos.x, self.pos.y, 1, 7)
+      circfill(self.pos.x, self.pos.y, 1, self.color)
     end,
     update = function(self)
       if (collided(self, self.target)) then
@@ -92,7 +92,7 @@ function make_turret(o)
     end,
     draw_range = function(self)
       local center = get_center(self)
-      circ(center.x, center.y, self.range, 5)
+      circ(center.x, center.y, self.range, self.color)
     end,
     draw = function(self)
       if (self.debug_show_range) then
@@ -340,7 +340,7 @@ game_scene = make_scene({
     local grid_x = self.turret_grid[tile_pos.x]
     local is_eligible = grid_x and grid_x[tile_pos.y] == false
     if (is_eligible and self.gold >= turret_cost) then
-      local turret = make_turret({ color = 11, scene = self, pos = pos })
+      local turret = make_turret({ color = 7, scene = self, pos = pos })
       grid_x[tile_pos.y] = turret
       add(self.turrets, turret)
       self:add(turret)
