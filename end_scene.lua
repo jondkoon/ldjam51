@@ -5,8 +5,6 @@ end_scene = make_scene({
   end,
   init = function(self)
     sfx(1)
-    self.gold = 0
-    self.wave = 0
     self.start_game_text_blink = 0
   end,
   update = function(self)
@@ -23,8 +21,11 @@ end_scene = make_scene({
 
     spr(194, 48, 16, 4, 4)
 
-    center_print("wave: "..self.wave, 52, 7)
-    center_print("gold: "..self.gold, 60, 7)
+    local wave = self.wave or 0
+    local gold = self.gold or 0
+
+    center_print("wave: "..wave, 52, 7)
+    center_print("gold: "..gold, 60, 7)
 
     -- instructions
     if self.start_game_text_blink > 30 then

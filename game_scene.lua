@@ -1,3 +1,27 @@
+-- make_temp_message({ scene = self, text = prince.gold, pos = prince.pos, seconds = 1, color = 10 })
+function make_temp_message(o)
+  local message = {
+    scene = o.scene,
+    text = o.text,
+    pos = o.pos,
+    seconds = o.seconds,
+    color = o.color,
+    init = function(self)
+      self.timer = 0
+    end,
+    draw = function(self)
+      print(self.text, self.pos.x, self.pos.y, self.color)
+    end,
+    update = function(self)
+      self.timer += 1
+      if (self.timer > self.seconds * 60) then
+        self.scene:remove(self)
+      end
+    end
+  }
+  o.scene:add(message)
+end
+
 function make_bullet(o)
   local bullet = {
     color = o.color,
@@ -38,10 +62,42 @@ function make_bullet(o)
   return bullet
 end
 
+local turret_levels = {
+  {
+    cost = 0,
+    color = 7, -- white
+    fire_interval = 60,
+    range = 30,
+    power = 5,
+  },
+  {
+    cost = 100,
+    color = 12, -- blue
+    fire_interval = 60,
+    range = 40,
+    power = 10,
+  },
+  {
+    cost = 200,
+    color = 9, -- orange
+    fire_interval = 60,
+    range = 50,
+    power = 10,
+  },
+  {
+    cost = 300,
+    color = 10, -- yellow
+    fire_interval = 30,
+    range = 30,
+    power = 15,
+  }
+}
+
+
 function make_turret(o)
   local turret = {
     type = 'turret',
-    color = o.color,
+    level = 0,
     scene = o.scene,
     width = 8,
     height = 8,
@@ -49,8 +105,6 @@ function make_turret(o)
     sprite = 7,
     flip_x = false,
     flip_y = true,
-    fire_interval = 60,
-    range = 30,
     debug_show_range = false,
     find_target = function(self)
       local closest
@@ -65,6 +119,24 @@ function make_turret(o)
       end
       return closest
     end,
+    upgrade = function(self)
+      if (self.level > #turret_levels - 1) then
+        make_temp_message({ scene = self.scene, seconds = 1, color = 8, pos = self.pos, text = "max level" })
+        return
+      end
+      local next_level = self.level + 1
+      local level_attrs = turret_levels[next_level]
+      if (self.scene.gold >= level_attrs.cost) then
+        self.level = next_level
+        self.color = level_attrs.color
+        self.fire_interval = level_attrs.fire_interval
+        self.range = level_attrs.range
+        self.power = level_attrs.power
+        self.scene:use_gold(level_attrs.cost)
+      else
+        make_temp_message({ scene = self.scene, seconds = 1, color = 8, pos = self.pos, text = "cost "..level_attrs.cost })
+      end
+    end,
     shoot = function(self)
       local target = self:find_target()
       if (target) then
@@ -73,7 +145,7 @@ function make_turret(o)
           pos = get_center(self),
           target = target,
           scene = self.scene,
-          power = 5
+          power = self.power,
         })
         self.scene:add(bullet)
       end
@@ -110,9 +182,13 @@ function make_turret(o)
       if (self.debug_show_range) then
         self:draw_range()
       end
+      pal(7, self.color)
       spr(self.sprite, self.pos.x, self.pos.y, 1, 1, self.flip_x, self.flip_y)
+      pal(7, 7)
     end
   }
+  turret:upgrade() -- set initial attributes for level 1 
+
   return turret
 end
 
@@ -121,6 +197,7 @@ function make_prince(o)
     pos = o.pos,
     scene = o.scene,
     dp = vector{0,0},
+    gold = 10,
     width = 2,
     height = 7,
     speed = 0.6,
@@ -259,7 +336,11 @@ function make_princess(o)
       if self.tile_info then
         self.cursor_pos = tile_pos
         if (btnp(4)) then
-          self:place_turret()
+          if (self.tile_info.type == "turret") then
+            self.tile_info:upgrade()
+          else
+            self:place_turret()
+          end
         end
       else
         self.tile_info = nil
@@ -296,6 +377,8 @@ local wave_prince_count = {
   6,
   10
 }
+
+local show_instructions = true
 
 game_scene = make_scene({
   init_turret_grid = function(self)
@@ -362,7 +445,8 @@ game_scene = make_scene({
     self:add(prince)
   end,
   remove_prince = function(self, prince)
-    self:add_gold(10)
+    make_temp_message({ scene = self, seconds = 1, color = 10, pos = prince.pos, text = prince.gold })
+    self:add_gold(prince.gold)
     self:remove(prince)
     del(self.princes, prince)
   end,
@@ -380,13 +464,24 @@ game_scene = make_scene({
     local tile_pos = to_tile_coordinate(pos)
     local grid_x = self.turret_grid[tile_pos.x]
     local is_eligible = grid_x and grid_x[tile_pos.y] == false
-    if (is_eligible and self.gold >= turret_cost) then
-      local turret = make_turret({ color = 7, scene = self, pos = pos })
-      grid_x[tile_pos.y] = turret
-      add(self.turrets, turret)
-      self:add(turret)
-      self.gold -= turret_cost
+    if (is_eligible) then
+      if (self.gold >= turret_cost) then
+        local turret = make_turret({ scene = self, pos = pos })
+        grid_x[tile_pos.y] = turret
+        add(self.turrets, turret)
+        self:add(turret)
+        self:use_gold(turret_cost)
+
+        if (#self.turrets == 1) then
+          self.show_upgrade_instructions_timer = 4 * 60
+        end
+      else
+        make_temp_message({ scene = self, seconds = 1, color = 8, pos = pos, text = "cost "..turret_cost })
+      end
     end
+  end,
+  use_gold = function(self, amount)
+    self.gold -= amount
   end,
   add_gold = function(self, amount) 
     self.gold += amount
@@ -394,7 +489,7 @@ game_scene = make_scene({
   end,
   init = function(self)
     self.scene_time = 0
-    self.prince_wave_count = 0
+    self.prince_wave_count = 1
     self.next_prince_wave_count = wave_prince_count[1]
     self.wave = 0
     self.wave_countdown = 10
@@ -457,9 +552,17 @@ game_scene = make_scene({
     self:draw_over_tile(self.start_tile_pos)
     self:draw_over_tile(self.end_tile_pos)
 
-    if (self.scene_time < 60 * 5) then
-      center_print("press z to buy turrets", 94, 7)
-      center_print("press x to fire", 102, 7)
+    if (show_instructions) then
+      if (self.scene_time < 60 * 5) then
+        center_print("press z to buy turrets", 94, 7)
+        center_print("press x to fire", 102, 7)
+      elseif (self.show_upgrade_instructions_timer and self.show_upgrade_instructions_timer > 0) then
+        self.show_upgrade_instructions_timer -= 1
+        center_print("press z on turret to upgrade", 94, 7)
+        if (self.show_upgrade_instructions_timer < 0) then
+          show_instructions = false
+        end
+      end
     end
 
     -- debug path finding
